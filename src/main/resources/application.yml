@@ -1,0 +1,34 @@
+spring:
+  security:
+    oauth2:
+      client:
+        registration:
+          github:
+            client-id: YOUR_CLIENT_ID_HERE
+            client-secret: YOUR_SECRET_HERE
+            scope: user, user:email
+            redirect-uri: "{baseUrl}/login/oauth2/code/github"
+
+  datasource:
+    url: jdbc:mysql://localhost:3306/oidc
+    password: root@123
+    username: root
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  jpa:
+    database-platform: org.hibernate.dialect.MySQL8InnoDBDialect
+    generate-ddl: true
+    show-sql: true
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        globally_quoted_indentifiers: true
+        dialect: org.hibernate.dialect.MySQL8Dialect
+        format_sql: true
+  sql:
+     init:
+       mode: never
+       continue-on-error: false
+       
+jwt:
+  secret: SOME_RANDOM_SECRET 
