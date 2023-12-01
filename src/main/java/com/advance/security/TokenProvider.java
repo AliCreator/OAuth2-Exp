@@ -12,6 +12,8 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
 
+import com.advance.entity.User;
+import com.advance.repository.UserRepository;
 import com.advance.security.UserPrincipal;
 import com.advance.service.UserService;
 import com.auth0.jwt.JWT;
@@ -32,30 +34,29 @@ import static java.util.stream.Collectors.toList;
 @RequiredArgsConstructor
 public class TokenProvider {
 
-	private final UserService userService;
+	private final UserRepository userRepo;
 	public static final String AUTHORITIES = "authorities";
 	public static final String ISSUER = "Jan Ali Zahedi";
 	public static final String USER = "Full Stack App User";
 //	public static final long ACCESS_TOKEN_EXPIREATION_TIME = 2_800_000l;
-	public static final long ACCESS_TOKEN_EXPIREATION_TIME = 432_000_000l;
-	public static final long REFRESH_TOKEN_EXPIREATION_TIME = 432_000_000l;
-	
+	public static final long ACCESS_TOKEN_EXPIREATION_TIME = 1800_000L;
+	public static final long REFRESH_TOKEN_EXPIREATION_TIME = 604800_000L;
+
 	@Value("${jwt.secret}")
 	private String secret;
 
-	public String generateAccessToken(UserPrincipal principal) {
+	public String generateAccessToken(UserPrincipal user) {
+
 		return JWT.create().withIssuer(ISSUER).withAudience(USER).withIssuedAt(new Date())
-				.withSubject(String.valueOf(principal.getUser().getId()))
-				.withArrayClaim(AUTHORITIES, getClaimsFromUser(principal))
 				.withExpiresAt(new Date(currentTimeMillis() + ACCESS_TOKEN_EXPIREATION_TIME))
-				.sign(Algorithm.HMAC512(secret));
+				.withArrayClaim(AUTHORITIES, getClaimsFromUser(user))
+				.withSubject(String.valueOf(user.getUser().getId())).sign(Algorithm.HMAC512(secret));
 	}
-	
-	public String createRefreshToken(UserPrincipal userPrincipal) {
+
+	public String createRefreshToken(UserPrincipal user) {
 		return JWT.create().withIssuer(ISSUER).withAudience(USER).withIssuedAt(new Date())
-				.withSubject(String.valueOf(userPrincipal.getUser().getId()))
 				.withExpiresAt(new Date(currentTimeMillis() + REFRESH_TOKEN_EXPIREATION_TIME))
-				.sign(Algorithm.HMAC512(secret));
+				.withSubject(String.valueOf(user.getUser().getId())).sign(Algorithm.HMAC512(secret));
 	}
 
 	public List<GrantedAuthority> getAuthorities(String token) {
@@ -63,11 +64,10 @@ public class TokenProvider {
 		return stream(claims).map(SimpleGrantedAuthority::new).collect(toList());
 	}
 
-	public Authentication getAuthentication(Long id, List<GrantedAuthority> authorities,
-			HttpServletRequest request) {
-		
+	public Authentication getAuthentication(Long id, List<GrantedAuthority> authorities, HttpServletRequest request) {
+
 		UsernamePasswordAuthenticationToken userPassAuthToken = new UsernamePasswordAuthenticationToken(
-				userService.getUserById(id), null, authorities);
+				userRepo.findById(id).get(), null, authorities);
 		userPassAuthToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
 		return userPassAuthToken;
 	}

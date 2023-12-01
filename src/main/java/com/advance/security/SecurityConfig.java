@@ -26,37 +26,36 @@ import lombok.RequiredArgsConstructor;
 @EnableMethodSecurity
 @RequiredArgsConstructor
 public class SecurityConfig {
-	
-	private final CustomeUserDetailsService userDetailsService; 
-	private final BCryptPasswordEncoder encoder; 
+
+	private final CustomeUserDetailsService userDetailsService;
+	private final BCryptPasswordEncoder encoder;
 	private final AuthenticationFilter authenticationFilter;
-	private final CustomAccessDeniedHandler accessDeniedHandler; 
-	private final CustomAuthenticationEndpoint customAuthenticationEndpoint; 
+	private final CustomAccessDeniedHandler accessDeniedHandler;
+	private final CustomAuthenticationEndpoint customAuthenticationEndpoint;
 	private final CustomOAuth2UserService auth2UserService;
 	private final CustomOAuth2SuccessHandler auth2SuccessHandler;
-	
-	
-	private static final String[] PUBLIC_URLS = { "/auth/register/**", "/auth/login/**", "/oauth2/**" };
 
-	
+	private static final String[] PUBLIC_URLS = { "/auth/register/**", "/auth/login/**", "/oauth2/**", "/auth/getme/**" };
+
 	@Bean
 	public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
-		http.csrf(c -> c.disable()).cors(withDefaults());
-		http.sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
-		http.authorizeHttpRequests(auth -> auth.requestMatchers(PUBLIC_URLS).permitAll());
-		http.authorizeHttpRequests(
-				auth -> auth.requestMatchers(HttpMethod.DELETE, "/user/delete/**").hasAuthority("DELETE:USER"));
-		http.authorizeHttpRequests(
-				auth -> auth.requestMatchers(HttpMethod.DELETE, "/customer/delete/**").hasAuthority("DELETE:CUSTOMER"));
-		http.exceptionHandling(ex -> ex.accessDeniedHandler(accessDeniedHandler)
-				.authenticationEntryPoint(customAuthenticationEndpoint));
-		http.authorizeHttpRequests(auth -> auth.anyRequest().authenticated());
-		http.addFilterBefore(authenticationFilter, UsernamePasswordAuthenticationFilter.class);
-		http.oauth2Login(oauth2 -> oauth2.userInfoEndpoint(u -> u.userService(auth2UserService))); 
-		http.oauth2Login(oauth -> oauth.successHandler(auth2SuccessHandler)); 
+		http.csrf(c -> c.disable()).cors(withDefaults())
+				.sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+				
+				.authorizeHttpRequests(auth -> auth.requestMatchers(PUBLIC_URLS).permitAll() // Permit all public URLs
+						.requestMatchers(HttpMethod.DELETE, "/user/delete/**").hasAuthority("DELETE:USER")
+						.requestMatchers(HttpMethod.DELETE, "/customer/delete/**").hasAuthority("DELETE:CUSTOMER")
+						.anyRequest().authenticated()) // All other requests must be authenticated
+				.exceptionHandling(ex -> ex.accessDeniedHandler(accessDeniedHandler)
+						.authenticationEntryPoint(customAuthenticationEndpoint))
+				.addFilterBefore(authenticationFilter, UsernamePasswordAuthenticationFilter.class)
+				.oauth2Login(oauth2 -> oauth2.userInfoEndpoint(u -> u.userService(auth2UserService))
+						.successHandler(auth2SuccessHandler));
+				
+
 		return http.build();
 	}
-	
+
 	@Bean
 	public AuthenticationManager authenticationManager() {
 		DaoAuthenticationProvider authProvider = new DaoAuthenticationProvider();

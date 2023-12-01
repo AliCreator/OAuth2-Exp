@@ -16,14 +16,16 @@ import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 @Component
 @RequiredArgsConstructor
+@Slf4j
 public class AuthenticationFilter extends OncePerRequestFilter {
 
 	private final TokenProvider provider;
 
-	private static final String JWT = "jwt";
+	private static final String JWT = "access_token";
 
 	@Override
 	protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
@@ -34,11 +36,9 @@ public class AuthenticationFilter extends OncePerRequestFilter {
 		for (Cookie cookie : cookies) {
 			if (JWT.equals(cookie.getName())) {
 				jwt = cookie.getValue();
-
 				break;
 			}
 		}
-
 		if (jwt != null && !jwt.isEmpty()) {
 			Long id = getUser(request, jwt);
 			if (provider.isTokenValid(id, jwt)) {
@@ -60,24 +60,33 @@ public class AuthenticationFilter extends OncePerRequestFilter {
 	@Override
 	protected boolean shouldNotFilter(HttpServletRequest request) throws ServletException {
 
-		final Set<String> WHITE_LISTED_URIS = Set.of("/auth/register", "/auth/login","/oauth2/authorization/github", "/products", "/products/find/**",
-				"/products/update/**", "/orders/**");
+		 final Set<String> WHITE_LISTED_URIS = Set.of(
+			        "/auth/register", 
+			        "/auth/login", 
+			        "/oauth2/",
+			        "/oauth2/authorization/github", 
+			        "/auth/getme",
+			        "/products", 
+			        "/products/find/**", 
+			        "/products/update/**", 
+			        "/orders/**"
+			    );
 
 		if (request.getMethod().equalsIgnoreCase("OPTIONS")) {
 			return true;
 		}
 
 		Cookie[] cookies = request.getCookies();
-		boolean jwtCookiePresent = false;
+		boolean jwtCookiePresent = true;
 		if (cookies != null) {
 			for (Cookie cookie : cookies) {
-				if ("jwt".equalsIgnoreCase(cookie.getName())) {
-					jwtCookiePresent = true;
+				if (JWT.equalsIgnoreCase(cookie.getName())) {
+					jwtCookiePresent = false;
 					break;
 				}
 			}
 		}
-		if (!jwtCookiePresent) {
+		if (jwtCookiePresent) {
 			return true;
 		}
 
